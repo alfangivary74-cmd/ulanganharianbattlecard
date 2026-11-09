@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Duel Nilai: Penjaga Norma</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --panel-bg: #34495e;
+            --text-color: #ecf0f1;
+            --card-agama: #f1c40f;
+            --card-susila: #e74c3c;
+            --card-sopan: #2ecc71;
+            --card-hukum: #3498db;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a2e;
+            font-family: 'Courier New', Courier, monospace; /* Gaya retro */
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 480px; /* Ukuran layar mobile/vertikal */
+            height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* --- BATTLE ARENA --- */
+        #arena {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            background: linear-gradient(to bottom, #2c3e50, #1a252f);
+        }
+
+        .character-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sprite {
+            width: 80px;
+            height: 80px;
+            background-color: #e74c3c;
+            border: 4px solid #c0392b;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            transition: transform 0.2s;
+        }
+
+        #player-sprite {
+            background-color: #3498db;
+            border-color: #2980b9;
+        }
+
+        .hp-bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: #000;
+            border: 2px solid #fff;
+        }
+
+        .hp-bar {
+            height: 100%;
+            background-color: #2ecc71;
+            width: 100%;
+            transition: width 0.3s ease-out;
+        }
+
+        /* --- QUESTION BOX --- */
+        #dialog-box {
+            background-color: #000;
+            border: 3px solid #fff;
+            padding: 15px;
+            margin: 10px 20px;
+            min-height: 80px;
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        /* --- CARDS DECK --- */
+        #deck {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 20px;
+            background-color: var(--panel-bg);
+            border-top: 4px solid #000;
+        }
+
+        .card {
+            background-color: #fff;
+            color: #000;
+            padding: 15px 5px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #999;
+            transition: all 0.1s;
+            user-select: none;
+        }
+
+        .card:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #999;
+        }
+
+        /* Warna spesifik kartu */
+        #card-agama { border-bottom-color: var(--card-agama); border-width: 4px; border-style: solid; }
+        #card-susila { border-bottom-color: var(--card-susila); border-width: 4px; border-style: solid; }
+        #card-sopan { border-bottom-color: var(--card-sopan); border-width: 4px; border-style: solid; }
+        #card-hukum { border-bottom-color: var(--card-hukum); border-width: 4px; border-style: solid; }
+
+        /* --- ANIMATIONS --- */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        .shake { animation: shake 0.3s; }
+        
+        @keyframes attackUp {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-50px); }
+            100% { transform: translateY(0); }
+        }
+        .attack-up { animation: attackUp 0.3s; }
+
+        @keyframes attackDown {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(50px); }
+            100% { transform: translateY(0); }
+        }
+        .attack-down { animation: attackDown 0.3s; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="arena">
+        <!-- Enemy Status -->
+        <div class="character-box">
+            <div id="enemy-hp-text">Monster Pelanggar: 100 HP</div>
+            <div class="hp-bar-container"><div id="enemy-hp-bar" class="hp-bar"></div></div>
+            <div id="enemy-sprite" class="sprite">👹</div>
+        </div>
+
+        <!-- Player Status -->
+        <div class="character-box">
+            <div id="player-sprite" class="sprite">🛡️</div>
+            <div class="hp-bar-container"><div id="player-hp-bar" class="hp-bar"></div></div>
+            <div id="player-hp-text">Siswa PPKn: 100 HP</div>
+        </div>
+    </div>
+
+    <!-- Kotak Soal -->
+    <div id="dialog-box">
+        Monster menyerang! Bersiaplah!
+    </div>
+
+    <!-- Deck Kartu Jawaban -->
+    <div id="deck">
+        <div class="card" id="card-agama" onclick="playCard('Agama')">Agama</div>
+        <div class="card" id="card-susila" onclick="playCard('Kesusilaan')">Kesusilaan</div>
+        <div class="card" id="card-sopan" onclick="playCard('Kesopanan')">Kesopanan</div>
+        <div class="card" id="card-hukum" onclick="playCard('Hukum')">Hukum</div>
+    </div>
+</div>
+
+<script>
+    // --- DATABASE SOAL (Tingkat Sulit / HOTS - 20 Soal) ---
+    const bankSoal = [
+        {
+            pertanyaan: "Seorang pejabat negara dijatuhi hukuman penjara dan penyitaan aset karena terbukti melakukan tindak pidana korupsi dana bantuan sosial.",
+            jawaban: "Hukum",
+            damage: 5
+        },
+        {
+            pertanyaan: "Menolak ikut tawuran bukan karena takut ditangkap polisi, melainkan karena sadar di dalam hati sanubarinya bahwa menyakiti orang lain itu salah.",
+            jawaban: "Kesusilaan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Membungkukkan badan sedikit dan menyapa dengan ramah saat berjalan melewati sekumpulan warga tua yang sedang duduk di pos ronda.",
+            jawaban: "Kesopanan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Seorang siswa menemukan dompet di jalan dan mengembalikannya karena yakin Tuhan Maha Melihat segala perbuatannya kapanpun dan dimanapun.",
+            jawaban: "Agama",
+            damage: 5
+        },
+        {
+            pertanyaan: "Rasa gundah dan gelisah yang terus menghantui pikiran setelah dengan sengaja memfitnah teman sebangku agar ia dibenci teman sekelas.",
+            jawaban: "Kesusilaan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Menerima dan memberikan sesuatu menggunakan tangan kanan saat berinteraksi dengan orang lain, khususnya yang lebih tua.",
+            jawaban: "Kesopanan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Pelaku perundungan siber (cyberbullying) yang menyebarkan hoaks akhirnya dilaporkan ke polisi dan dijerat dengan UU ITE.",
+            jawaban: "Hukum",
+            damage: 5
+        },
+        {
+            pertanyaan: "Menjauhi larangan untuk tidak merusak alam semesta yang merupakan ciptaan-Nya karena alam adalah titipan untuk dijaga.",
+            jawaban: "Agama",
+            damage: 5
+        },
+        {
+            pertanyaan: "Berpakaian rapi, tidak mencolok, dan menempatkan diri dengan tenang saat menghadiri acara pemakaman tetangga.",
+            jawaban: "Kesopanan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Membayar pajak penghasilan tepat waktu setiap tahunnya demi mematuhi peraturan perundang-undangan yang berlaku di negara.",
+            jawaban: "Hukum",
+            damage: 5
+        },
+        {
+            pertanyaan: "Saat ujian, Budi melihat kunci jawaban yang terjatuh, namun hatinya menolak keras untuk menyontek karena sadar itu adalah tindakan curang.",
+            jawaban: "Kesusilaan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Membantu tetangga yang berbeda keyakinan saat mereka tertimpa musibah karena menyadari bahwa semua ajaran Tuhan mengajarkan kasih sayang.",
+            jawaban: "Agama",
+            damage: 5
+        },
+        {
+            pertanyaan: "Mengetuk pintu dan mengucapkan salam dengan suara lembut sebelum memasuki ruang guru atau ruang kepala sekolah.",
+            jawaban: "Kesopanan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Sanksinya bersifat tegas, nyata, dan memaksa, serta dibuat oleh lembaga resmi negara yang berwenang demi ketertiban umum.",
+            jawaban: "Hukum",
+            damage: 5
+        },
+        {
+            pertanyaan: "Berkata jujur tentang siapa yang memecahkan kaca jendela kelas meski tahu akan dimarahi, karena kebohongan bertentangan dengan suara hati terdalamnya.",
+            jawaban: "Kesusilaan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Rajin bersedekah kepada anak yatim piatu di panti asuhan sebagai bentuk rasa syukur atas nikmat dan rezeki yang diberikan Tuhan Yang Maha Esa.",
+            jawaban: "Agama",
+            damage: 5
+        },
+        {
+            pertanyaan: "Sanksi berupa penyesalan mendalam dan rasa bersalah dalam hati karena telah membohongi orang tua.",
+            jawaban: "Kesusilaan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Monster menerobos lampu merah di jalan raya sehingga membahayakan pengguna jalan lain! Kartu apa yang bisa menghukumnya?",
+            jawaban: "Hukum",
+            damage: 5
+        },
+        {
+            pertanyaan: "Tidak meludah di sembarang tempat dan membuang sampah pada tempatnya demi menghargai kenyamanan orang-orang di sekitarnya.",
+            jawaban: "Kesopanan",
+            damage: 5
+        },
+        {
+            pertanyaan: "Meninggalkan ibadah wajib akan mendapatkan dosa dan balasan di akhirat kelak, ini adalah teguran dari norma...",
+            jawaban: "Agama",
+            damage: 5
+        }
+    ];
+
+    let playerHP = 100;
+    let enemyHP = 100;
+    let currentSoalIndex = 0;
+    let isAnimating = false;
+    let correctCount = 0;
+    let wrongCount = 0;
+
+    const dialogBox = document.getElementById('dialog-box');
+    const enemyHpBar = document.getElementById('enemy-hp-bar');
+    const playerHpBar = document.getElementById('player-hp-bar');
+    const enemySprite = document.getElementById('enemy-sprite');
+    const playerSprite = document.getElementById('player-sprite');
+
+    // Inisialisasi Game
+    function initGame() {
+        // Cek apakah siswa sudah pernah bermain/ulangan
+        if (localStorage.getItem('duelNilaiSelesai') === 'true') {
+            let savedBenar = localStorage.getItem('duelNilaiBenar') || 0;
+            let savedSalah = localStorage.getItem('duelNilaiSalah') || 0;
+            
+            dialogBox.innerHTML = `<strong>PERHATIAN:</strong><br>Anda sudah menyelesaikan ulangan harian ini.<br><br><strong>Statistik Nilai:</strong><br>✅ Benar: ${savedBenar} | ❌ Salah: ${savedSalah}`;
+            document.getElementById('deck').style.opacity = '0.5';
+            document.getElementById('deck').style.pointerEvents = 'none';
+            return; // Hentikan permainan agar tidak lanjut
+        }
+
+        // Acak soal agar berbeda setiap main
+        bankSoal.sort(() => Math.random() - 0.5);
+        showSoal();
+    }
+
+    function showSoal() {
+        if (currentSoalIndex < bankSoal.length) {
+            dialogBox.innerHTML = `<strong>KASUS:</strong><br>${bankSoal[currentSoalIndex].pertanyaan}`;
+        } else {
+            endGame("Semua kasus telah diselesaikan!");
+        }
+    }
+
+    function playCard(pilihanSiswa) {
+        if (isAnimating || currentSoalIndex >= bankSoal.length) return;
+        isAnimating = true;
+
+        const soalSaatIni = bankSoal[currentSoalIndex];
+        
+        if (pilihanSiswa === soalSaatIni.jawaban) {
+            // BENAR: Player serang Monster
+            correctCount++;
+            dialogBox.innerHTML = `HEBAT! Serangan Kartu Norma ${pilihanSiswa} berhasil!`;
+            playerAttack(soalSaatIni.damage);
+        } else {
+            // SALAH: Monster serang Player
+            wrongCount++;
+            dialogBox.innerHTML = `SALAH! Itu bukan Norma ${pilihanSiswa}. Monster balik menyerang!`;
+            enemyAttack(20); // Damage penalti jika salah
+        }
+    }
+
+    function playerAttack(damage) {
+        playerSprite.classList.add('attack-up');
+        setTimeout(() => {
+            playerSprite.classList.remove('attack-up');
+            enemySprite.classList.add('shake'); // Monster kena damage
+            
+            enemyHP = Math.max(0, enemyHP - damage);
+            updateStatus();
+            
+            setTimeout(() => {
+                enemySprite.classList.remove('shake');
+                checkGameState();
+            }, 400);
+        }, 150);
+    }
+
+    function enemyAttack(damage) {
+        enemySprite.classList.add('attack-down');
+        setTimeout(() => {
+            enemySprite.classList.remove('attack-down');
+            playerSprite.classList.add('shake'); // Player kena damage
+            
+            playerHP = Math.max(0, playerHP - damage);
+            updateStatus();
+            
+            setTimeout(() => {
+                playerSprite.classList.remove('shake');
+                checkGameState();
+            }, 400);
+        }, 150);
+    }
+
+    function updateStatus() {
+        enemyHpBar.style.width = enemyHP + '%';
+        playerHpBar.style.width = playerHP + '%';
+        document.getElementById('enemy-hp-text').innerText = `Monster Pelanggar: ${enemyHP} HP`;
+        document.getElementById('player-hp-text').innerText = `Siswa PPKn: ${playerHP} HP`;
+    }
+
+    function checkGameState() {
+        if (playerHP <= 0) {
+            endGame("GAME OVER! Nilai Pancasilamu goyah. Ulangan selesai!");
+        } else if (enemyHP <= 0) {
+            endGame("MENANG! Monster Pelanggar berhasil dikalahkan! Ulangan selesai!");
+        } else {
+            // Lanjut soal berikutnya
+            currentSoalIndex++;
+            showSoal();
+            isAnimating = false;
+        }
+    }
+
+    function endGame(pesan) {
+        // Tampilkan pesan dan statistik akhir
+        dialogBox.innerHTML = `${pesan}<br><br><strong>Statistik Akhir:</strong><br>✅ Benar: ${correctCount} | ❌ Salah: ${wrongCount}`;
+        
+        // Simpan status dan nilai ke localStorage
+        localStorage.setItem('duelNilaiSelesai', 'true');
+        localStorage.setItem('duelNilaiBenar', correctCount);
+        localStorage.setItem('duelNilaiSalah', wrongCount);
+        
+        // Kunci dek kartu
+        document.getElementById('deck').style.opacity = '0.5';
+        document.getElementById('deck').style.pointerEvents = 'none';
+    }
+
+    // Mulai game saat web dimuat
+    window.onload = initGame;
+</script>
+</body>
+</html>
